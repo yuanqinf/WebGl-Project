@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<meta charset="UTF-8">
+<html>
+<head>
+<title>Final Project</title>
+<style>
+    body {
+        background-color: #EEEEEE;
+    }
+    label {
+        white-space: pre;
+    }
+</style>
+
+<!-- vertex shader -->
+<script type="x-shader/x-vertex" id="vshader-source">
+    attribute vec3 a_coords;
+    attribute vec3 a_normal;
+    attribute vec4 aVertexColor;
+    uniform mat4 modelview;
+    uniform mat4 projection;
+
+    uniform mat3 normalMatrix;
+    uniform vec4 lightPosition;
+    uniform vec4 lightPosition2;
+    uniform vec4 lightPosition3;
+    uniform vec4 diffuseColor;
+    uniform vec3 specularColor;
+    uniform float specularExponent;
+    
+
+
+    varying vec3 diffuse;
+    varying vec3 L;
+    varying vec3 L2;
+    varying vec3 L3;
+    varying vec3 N;
+    varying vec3 coordi;
+
+    varying vec4 Color;
+    varying float headlight;
+    varying vec4 eyeCoords;
+
+    uniform float uisbelow;
+    uniform float uisland;
+    uniform float uiscar;
+    uniform float uiswheel;
+    uniform float uisring;
+    uniform float uistree;
+
+    void main() {
+        
+        
+        vec4 coords = vec4(a_coords,1.0);
+        eyeCoords = modelview* coords;
+        gl_Position = projection * eyeCoords;
+        coordi = a_coords;
+        vec3 R, V;  // vectors for lighting equation
+        N = normalize( normalMatrix*a_normal );
+        if ( lightPosition.w == 0.0 ) {
+            L = normalize( lightPosition.xyz );
+        }
+        else {
+            L = normalize( lightPosition.xyz/lightPosition.w - eyeCoords.xyz );
+        }
+        float olight = dot(L,N);
+        if (uisbelow==1.0){
+            headlight = uisbelow;
+
+            if ( lightPosition2.w == 0.0 ) {
+                L2 = normalize( lightPosition2.xyz );
+            }
+            else {
+                L2 = lightPosition2.xyz/lightPosition2.w - eyeCoords.xyz ;
+            }
+            if ( lightPosition3.w == 0.0 ) {
+                L3 = normalize( lightPosition3.xyz );
+            }
+            else {
+                L3 = lightPosition3.xyz/lightPosition3.w - eyeCoords.xyz ;
+            }
+
+            
+        }
+
+
+        R = -reflect(L,N);
+        V = normalize( -eyeCoords.xyz);     // (Assumes a perspective projection.)
+        Color = aVertexColor;
+        if(uisland==1.0){diffuse=vec3(0,1,0);}
+        else if(uiscar==1.0){diffuse=vec3(1,0,0);}
+        else if(uiswheel==1.0){diffuse=vec3(0,0,0); }
+        else if(uisring==1.0){diffuse=vec3(1,1,1); }
+        else if(uistree==1.0){diffuse=vec3(1,0.5,0.3); }
+        else{diffuse=vec3(1,1,1);}
+/*
+        if ( dot(L,N) <= 0.0 ) {
+        
+           
+            v_color = vec4(0,0,0,1);
+          }
+
+  */        
+
+          
+
+    }
+</script>
+
+<!-- fragment shader -->
+<script type="x-shader/x-fragment" id="fshader-source">
+    precision mediump float;
+    
+
+    uniform float uislight;
+    uniform float uissun;
+    uniform vec3 lightDirection;
+
+    varying vec3 coordi;
+    varying vec4 eyeCoords;
+    varying vec3 L;
+    varying vec3 L2;
+    varying vec3 L3;
+    varying vec3 N;
+    varying float headlight;
+    varying vec3 diffuse;
+
+    varying vec4 Color;
+    void main() {
+        float olight = dot(L,N);
+        vec3 color = vec3(0,0,0);
+        
+        color+=0.5*max(olight,0.0) * diffuse; 
+        if (headlight==1.0){
+           
+            float attenuation = 1.0/(1.0+length(L2));
+            float light=.0;
+            vec3 v_surfaceToLight = L2 ;
+            vec3 v_surfaceToView = eyeCoords.xyz - L2;
+            vec3 surfaceToLightDirection = normalize(v_surfaceToLight);
+            //vec3 surfaceToViewDirection = normalize(v_surfaceToView);
+            //vec3 lightDirection = u_lightDirection;
+            //vec3 lightDirection = vec3(-1,0,0);
+            //vec3 halfVector = normalize(surfaceToLightDirection + surfaceToViewDirection);
+            float dotFromDirection;
+            dotFromDirection = dot(surfaceToLightDirection, -normalize(lightDirection));
+            float specular;
+            
+            
+            if (dotFromDirection >= 0.75) {
+                //color *=.0;
+                light = dot(surfaceToLightDirection,N) * smoothstep(0.65, 1.0, dotFromDirection);
+                if (light >= 0.0) {
+                    //specular = pow(dot(N, halfVector), 10.0);
+                    
+                    }
+            }
+            //float inLight = smoothstep(0.89, 1.0, dotFromDirection);
+            //light = inLight * dot(N, surfaceToLightDirection);
+            //light = dot(surfaceToLightDirection,N);
+            //light = dot(L2, N);
+            //light = dot(surfaceToLightDirection,N) * (smoothstep(0.75, 1.0, dotFromDirection));
+            color += 0.5*max(light,0.0)*diffuse*attenuation;
+
+            float light2=.0;
+            float attenuation2 = 1.0/(1.0+length(L3));
+            vec3 v_surfaceToLight2 = L3 ;
+            //vec3 v_surfaceToView = eyeCoords.xyz - L3;
+            vec3 surfaceToLightDirection2 = normalize(v_surfaceToLight2);
+            //vec3 surfaceToViewDirection = normalize(v_surfaceToView);
+            //vec3 lightDirection = u_lightDirection;
+            //vec3 lightDirection = vec3(-1,0,0);
+            //vec3 halfVector = normalize(surfaceToLightDirection + surfaceToViewDirection);
+            float dotFromDirection2;
+            dotFromDirection2 = dot(surfaceToLightDirection2, -normalize(lightDirection));
+            float specular2;
+            
+            if (dotFromDirection2 >= 0.75) {
+                //color *=.0;
+                light2 = dot(surfaceToLightDirection2,N)* (smoothstep(0.65, 1.0, dotFromDirection2));
+                if (light >= 0.0) {
+                    //specular = pow(dot(N, halfVector), 10.0);
+                    
+                    }
+            }
+            //light = dot(surfaceToLightDirection,N);
+            //light = dot(L2, N);
+            
+            //light2 = dot(surfaceToLightDirection2,N) * (smoothstep(0.75, 1.0, dotFromDirection2)+0.3);
+            
+            color += 0.5*max(light2,0.0)*diffuse*attenuation;
+            //color += specular;
+        }
+
+
+        //if (dot(R,V) > 0.0) {
+            //color += 0.1*pow(dot(R,V),specularExponent) * specularColor; // 0.4 is specular intensity //of light
+        //}
+        vec4 v_color;
+        v_color = vec4(color,1);
+
+
+        if (uislight==1.0){
+            v_color = vec4(1,1,0,1);
+        }            
+        if (uissun==1.0){
+            if (uislight==1.0){
+                v_color = vec4(1,1,0,1);
+            }
+            else {
+                v_color = vec4(0.2,0.2,0.2,1);
+            }
+        }
+
+
+
+
+
+        gl_FragColor = v_color;
+        
+    }
+</script>
+
+
+<script src="gl-matrix-min.js"></script>
+<script type="text/javascript" src="webgl-utils.js"></script>
+<script src="trackball-rotator.js"></script>
+<script src="models.js"></script>
+<script src = "final.js"></script>
+</head>
+
+<body onload="init()">
+Name: Yuanqin Fan <br/>
+Student ID:34137914 <br/>
+<label><input type="checkbox" id="my_gl"><b>Use_Animation</b></label>
+
+<div id="canvas-holder">
+   <canvas width=800 height=800 id="myGLCanvas"</canvas>
+</div>
+
+</body>
+
+</html>
+
